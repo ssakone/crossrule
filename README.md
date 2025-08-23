@@ -62,39 +62,6 @@ CrossRule will:
 3. Present an interactive list of target editors
 4. Convert your rules while preserving their meaning and structure
 
-## Example Workflow
-
-```bash
-$ cd my-typescript-project
-$ crossrule init
-
-= CrossRule Init - Detecting existing rules...
-
- Found existing rules:
-
-=� Cursor:
-   Location: .cursor/rules
-   Rules: 3 files
-
-Using rules from Cursor as source.
-Found 3 rules at: .cursor/rules
-
-=� Select target editors to generate rules for:
-
-o� Windsurf
- � Cline  
- � Claude Code
- � Qoder
-
- Conversion completed successfully!
-
-Converted: 3 files
-Output files:
-  " .windsurf/rules/typescript.md
-  " .windsurf/rules/react.md
-  " .windsurf/rules/testing.md
-```
-
 ## How It Works
 
 ### Smart Detection
