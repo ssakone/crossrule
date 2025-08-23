@@ -1,6 +1,6 @@
 {
   "name": "crossrule",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Convert AI editor rules between different formats (Cursor, Windsurf, Cline, VSCode, Codex CLI, Claude Code, Qoder, Trae, QwenCoder)",
   "main": "dist/index.js",
   "type": "module",

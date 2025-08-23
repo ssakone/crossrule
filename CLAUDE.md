@@ -97,3 +97,6 @@ Detailed requirements available in `spec.md` including:
 - Implement comprehensive error handling for file I/O operations
 - Support both interactive and non-interactive CLI modes
 - Handle edge cases in rule format parsing and conversion
+## api-validation
+
+Always validate API input parameters

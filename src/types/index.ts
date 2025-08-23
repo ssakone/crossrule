@@ -24,6 +24,53 @@ export interface DetectionResult {
   ruleCount: number;
 }
 
+// Universal Rule Management System
+export interface UniversalRule {
+  id: string;
+  name: string;
+  type: UniversalRuleType;
+  content: string;              // Supports multi-line content
+  patterns?: string[];          // File patterns for pattern-based rules
+  context?: string;             // Context for AI-decision rules
+  description?: string;         // Human-readable description
+  formatting?: {
+    preserveMarkdown: boolean;  // Keep markdown structure
+    preserveLineBreaks: boolean; // Maintain line breaks
+    indentationStyle: 'spaces' | 'tabs';
+    indentationSize: number;
+  };
+  metadata: {
+    created: Date;
+    updated: Date;
+    author?: string;
+    version: number;
+    contentHash: string;        // For detecting changes
+    lineCount: number;          // Track complexity
+  };
+  targetEditors: EditorType[];  // Which editors to sync to
+}
+
+export interface AddRuleOptions {
+  name?: string;                // Auto-generated if not provided
+  type: UniversalRuleType;
+  content?: string;             // Can be provided via stdin or file
+  patterns?: string[];
+  context?: string;
+  description?: string;
+  targetEditors: EditorType[] | 'all';
+  fromFile?: string;            // Read content from file
+  preserveMarkdown?: boolean;
+  author?: string;
+}
+
+export interface AddRuleResult {
+  success: boolean;
+  rule?: UniversalRule;
+  outputFiles: string[];       // Files created/modified
+  errors: string[];
+  warnings: string[];
+}
+
 export type EditorType = 
   | 'cursor'
   | 'windsurf'
@@ -43,6 +90,13 @@ export type RuleType =
   | 'model-decision'   // Model decides when to apply
   | 'glob-pattern'     // Pattern-based activation
   | 'specific-files';  // File-specific rules
+
+// Universal rule system types
+export type UniversalRuleType = 
+  | 'always'           // Always apply everywhere
+  | 'pattern'          // Pattern-based (file/project specific)  
+  | 'manual'           // Manual trigger
+  | 'ai-decision';     // AI-decided based on context
 
 export interface EditorConfig {
   name: string;

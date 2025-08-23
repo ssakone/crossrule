@@ -45,7 +45,7 @@ Verify the installation:
 
 ```bash
 crossrule --version
-# Should output: 1.0.0
+# Should output: 1.0.1
 ```
 
 ## Quick Start
@@ -61,6 +61,69 @@ CrossRule will:
 2. Show you what it found and let you choose a source
 3. Present an interactive list of target editors
 4. Convert your rules while preserving their meaning and structure
+
+## Universal Rule Management
+
+### Adding New Rules
+
+Create and deploy rules across all your AI editors with a single command:
+
+```bash
+# Simple always-apply rule
+crossrule add "Use strict TypeScript configuration" --type always --to all
+
+# Pattern-based rule for specific file types
+crossrule add "React components must use functional syntax" \
+  --type pattern --patterns "*.tsx,*.jsx" --to cursor,windsurf
+
+# Complex multi-line rule from file
+crossrule add --from-file team-standards.md \
+  --type pattern --patterns "*.ts,*.tsx" --to all
+
+# AI-decision rule with context
+crossrule add "Suggest performance optimizations" \
+  --type ai-decision --context "performance-critical" --to cursor,qoder
+```
+
+### Rule Types
+
+CrossRule supports four intelligent rule types:
+
+- **Always (`--type always`)** - Applied to all conversations and code
+- **Pattern (`--type pattern`)** - Triggered when working with specific file types
+- **Manual (`--type manual`)** - Invoked explicitly by name or command  
+- **AI-Decision (`--type ai-decision`)** - Applied when AI determines relevance
+
+### Multi-Line Rules
+
+Handle complex coding standards with full markdown support:
+
+```bash
+# Using heredoc for complex rules
+crossrule add --type always --to all << 'EOF'
+# TypeScript Best Practices
+
+## Type Safety
+- Enable all strict mode flags
+- Use 'unknown' instead of 'any'
+- Implement proper error boundaries
+
+## Code Organization
+- One component per file
+- Index files for clean imports
+- Separate types into .types.ts files
+EOF
+```
+
+### Command Options
+
+- `--type <type>` - Rule type: always, pattern, manual, ai-decision
+- `--patterns <patterns>` - File patterns (comma-separated) for pattern rules
+- `--to <editors>` - Target editors: all, or comma-separated list
+- `--from-file <file>` - Read rule content from markdown file
+- `--name <name>` - Custom rule name (auto-generated if not provided)
+- `--description <desc>` - Rule description for documentation
+- `--context <context>` - Context hint for AI-decision rules
 
 ## How It Works
 

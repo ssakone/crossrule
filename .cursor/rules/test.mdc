@@ -1,0 +1,9 @@
+---
+description: TypeScript coding standards
+alwaysApply: true
+---
+
+# TypeScript Rules
+- Use strict mode configuration
+- Prefer interfaces over type aliases
+- Always provide return types for functions

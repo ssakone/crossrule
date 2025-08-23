@@ -4,40 +4,52 @@ import { DetectionResult } from '../types/index.js';
 import { detectAllRules } from '../parsers/index.js';
 import { EDITOR_CONFIGS, getEditorDisplayNames } from '../utils/index.js';
 
+// Export add command
+export { addCommand } from './add.js';
+
 export async function initCommand(): Promise<void> {
-  console.log(chalk.blue.bold('🔍 CrossRule Init - Detecting existing rules...\n'));
+  // Welcome message
+  console.log(chalk.cyan.bold('\nWelcome to CrossRule!'));
+  console.log(chalk.gray('Let me help you sync your AI editor rules across different tools.\n'));
+  
+  // Show scanning animation
+  const spinner = createSpinner();
+  spinner.start('Scanning your project for existing AI editor rules...');
   
   // Detect all existing rules in the current project
   const detectedRules = await detectAllRules('.');
+  spinner.stop();
   
   if (detectedRules.length === 0) {
-    console.log(chalk.yellow('❌ No existing AI editor rules found in this project.'));
-    console.log(chalk.gray('Searched for rules from: Cursor, Windsurf, Cline, VSCode, Codex CLI, Claude Code, Qoder, Trae, QwenCoder\n'));
+    console.log(chalk.yellow('\nNo AI editor rules found in this project.'));
+    console.log(chalk.gray('   I looked for: Cursor, Windsurf, Cline, VSCode, Codex CLI, Claude Code, Qoder, Trae, QwenCoder'));
     
-    const { shouldCreateNew } = await inquirer.prompt([
-      {
-        type: 'confirm',
-        name: 'shouldCreateNew',
-        message: 'Would you like to create new rules for an editor?',
-        default: false
-      }
-    ]);
+    const { shouldCreateNew } = await inquirer.prompt({
+      type: 'confirm',
+      name: 'shouldCreateNew',
+      message: 'Would you like me to help you create some rules?',
+      default: true
+    });
     
     if (shouldCreateNew) {
       await createNewRulesFlow();
+    } else {
+      console.log(chalk.gray('\nNo worries! Come back anytime when you have some rules to convert.'));
     }
     return;
   }
 
-  // Display detected rules
-  console.log(chalk.green.bold('✅ Found existing rules:\n'));
+  // Display detected rules in a friendly way
+  console.log(chalk.green('\nFound existing rules:'));
   
   for (const detection of detectedRules) {
-    const config = EDITOR_CONFIGS[detection.editor];
-    console.log(chalk.cyan(`📁 ${config.displayName}:`));
-    console.log(`   ${chalk.gray('Location:')} ${detection.location}`);
-    console.log(`   ${chalk.gray('Rules:')} ${detection.ruleCount} file(s)\n`);
+    const config = EDITOR_CONFIGS[detection.editor as keyof typeof EDITOR_CONFIGS];
+    const ruleText = detection.ruleCount === 1 ? 'rule' : 'rules';
+    console.log(`\n   ${chalk.bold(config.displayName)} - ${detection.ruleCount} ${ruleText}`);
+    console.log(`     ${chalk.gray(detection.location)}`);
   }
+
+  console.log(); // Empty line for spacing
 
   // Handle single or multiple rule sources
   if (detectedRules.length === 1) {
@@ -50,42 +62,66 @@ export async function initCommand(): Promise<void> {
   }
 }
 
+function createSpinner() {
+  let frame = 0;
+  const frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+  let interval: NodeJS.Timeout;
+  
+  return {
+    start: (message: string) => {
+      process.stdout.write('\x1B[?25l'); // Hide cursor
+      interval = setInterval(() => {
+        process.stdout.write('\r' + chalk.cyan(frames[frame]) + ' ' + message);
+        frame = (frame + 1) % frames.length;
+      }, 80);
+    },
+    stop: () => {
+      clearInterval(interval);
+      process.stdout.write('\r\x1B[K'); // Clear line
+      process.stdout.write('\x1B[?25h'); // Show cursor
+    }
+  };
+}
+
 async function handleSingleRuleSource(detection: DetectionResult): Promise<void> {
   const config = EDITOR_CONFIGS[detection.editor];
+  const ruleText = detection.ruleCount === 1 ? 'rule' : 'rules';
   
-  console.log(chalk.blue(`Using rules from ${config.displayName} as source.`));
-  console.log(chalk.gray(`Found ${detection.ruleCount} rule(s) at: ${detection.location}\n`));
+  console.log(chalk.blue(`Perfect! I'll use your ${config.displayName} ${ruleText} as the source.`));
+  console.log(chalk.gray(`That's ${detection.ruleCount} ${ruleText} from: ${detection.location}\n`));
   
   await selectTargetEditors(detection);
 }
 
 async function handleMultipleRuleSources(detections: DetectionResult[]): Promise<void> {
-  console.log(chalk.yellow('⚠️ Multiple rule sources detected. Please choose which one to use as the source:\n'));
+  console.log(chalk.blue('Multiple rule sources detected. Select which one to convert from:'));
   
   const choices = detections.map(detection => {
-    const config = EDITOR_CONFIGS[detection.editor];
+    const config = EDITOR_CONFIGS[detection.editor as keyof typeof EDITOR_CONFIGS];
+    const ruleText = detection.ruleCount === 1 ? 'rule' : 'rules';
     return {
-      name: `${config.displayName} (${detection.ruleCount} rules) - ${detection.location}`,
+      name: `${config.displayName} - ${detection.ruleCount} ${ruleText}`,
       value: detection,
       short: config.displayName
     };
   });
 
-  const { selectedSource } = await inquirer.prompt([
-    {
-      type: 'list',
-      name: 'selectedSource',
-      message: 'Select source rules to convert from:',
-      choices,
-      pageSize: Math.min(choices.length, 10)
-    }
-  ]);
+  const { selectedSource } = await inquirer.prompt({
+    type: 'list',
+    name: 'selectedSource',
+    message: 'Which rules should I convert from?',
+    choices,
+    pageSize: Math.min(choices.length, 10)
+  });
+
+  const config = EDITOR_CONFIGS[selectedSource.editor as keyof typeof EDITOR_CONFIGS];
+  console.log(chalk.green(`\n✨ Great choice! Using your ${config.displayName} rules.\n`));
 
   await selectTargetEditors(selectedSource);
 }
 
 async function selectTargetEditors(sourceDetection: DetectionResult): Promise<void> {
-  const sourceConfig = EDITOR_CONFIGS[sourceDetection.editor];
+  const sourceConfig = EDITOR_CONFIGS[sourceDetection.editor as keyof typeof EDITOR_CONFIGS];
   
   // Get all available editors except the source
   const allEditors = getEditorDisplayNames();
@@ -97,18 +133,20 @@ async function selectTargetEditors(sourceDetection: DetectionResult): Promise<vo
       checked: false
     }));
 
-  console.log(chalk.blue(`\n📝 Select target editors to generate rules for:\n`));
+  console.log(chalk.blue('Select target editors to convert to:'));
+  console.log(chalk.gray('   (Use spacebar to select, enter when ready)\n'));
   
   const { targetEditors } = await inquirer.prompt({
     type: 'checkbox',
     name: 'targetEditors',
-    message: 'Choose editors to generate rules for (use space to select, enter to confirm):',
+    message: 'Select target editors:',
     choices: targetChoices,
-    pageSize: Math.min(targetChoices.length, 10)
+    pageSize: Math.min(targetChoices.length, 8),
+    loop: false
   });
 
   if (targetEditors.length === 0) {
-    console.log(chalk.yellow('No target editors selected. Exiting.'));
+    console.log(chalk.yellow('No editors selected. Exiting.'));
     return;
   }
 
@@ -120,42 +158,41 @@ async function showConversionPreview(
   sourceDetection: DetectionResult, 
   targetEditors: string[]
 ): Promise<void> {
-  const sourceConfig = EDITOR_CONFIGS[sourceDetection.editor];
+  const sourceConfig = EDITOR_CONFIGS[sourceDetection.editor as keyof typeof EDITOR_CONFIGS];
+  const ruleText = sourceDetection.ruleCount === 1 ? 'rule' : 'rules';
   
-  console.log(chalk.green.bold('\n🔄 Conversion Preview:\n'));
-  console.log(`${chalk.cyan('Source:')} ${sourceConfig.displayName} (${sourceDetection.ruleCount} rules)`);
-  console.log(`${chalk.cyan('Location:')} ${sourceDetection.location}\n`);
+  console.log(chalk.green.bold('\nConversion preview:'));
   
-  console.log(chalk.cyan('Target editors:'));
-  for (const editorName of targetEditors) {
-    console.log(`  • ${editorName}`);
-  }
+  console.log(`\n   ${chalk.cyan('From:')} ${sourceConfig.displayName} (${sourceDetection.ruleCount} ${ruleText})`);
+  console.log(`   ${chalk.cyan('To:')} ${targetEditors.join(', ')}`);
   
-  console.log(chalk.gray('\nRules to be converted:'));
-  for (const rule of sourceDetection.rules.slice(0, 5)) {
-    const preview = rule.content.length > 50 
-      ? rule.content.substring(0, 50) + '...'
-      : rule.content;
-    console.log(`  • ${chalk.white(rule.name)} - ${chalk.gray(preview)}`);
-  }
-  
-  if (sourceDetection.rules.length > 5) {
-    console.log(`  ${chalk.gray(`... and ${sourceDetection.rules.length - 5} more`)}`);
+  if (sourceDetection.rules.length <= 3) {
+    console.log(`\n   ${chalk.gray('Your rules:')}`);
+    for (const rule of sourceDetection.rules) {
+      const preview = rule.content.length > 60 
+        ? rule.content.substring(0, 60).replace(/\n/g, ' ') + '...'
+        : rule.content.replace(/\n/g, ' ');
+      console.log(`   ${chalk.cyan('•')} ${chalk.white(rule.name)} - ${chalk.gray(preview)}`);
+    }
+  } else {
+    console.log(`\n   ${chalk.gray('Including rules:')}`);
+    for (const rule of sourceDetection.rules.slice(0, 3)) {
+      console.log(`   ${chalk.cyan('•')} ${rule.name}`);
+    }
+    console.log(`   ${chalk.gray(`... and ${sourceDetection.rules.length - 3} more`)}`);
   }
 
-  const { confirmConversion } = await inquirer.prompt([
-    {
-      type: 'confirm',
-      name: 'confirmConversion',
-      message: '\nProceed with conversion?',
-      default: true
-    }
-  ]);
+  const { confirmConversion } = await inquirer.prompt({
+    type: 'confirm',
+    name: 'confirmConversion',
+    message: '\nShall I convert these rules now?',
+    default: true
+  });
 
   if (confirmConversion) {
     await performConversion(sourceDetection, targetEditors);
   } else {
-    console.log(chalk.yellow('Conversion cancelled.'));
+    console.log(chalk.yellow('Operation cancelled. Your rules are unchanged.'));
   }
 }
 
@@ -163,63 +200,89 @@ async function performConversion(
   sourceDetection: DetectionResult,
   targetEditors: string[]
 ): Promise<void> {
-  console.log(chalk.blue.bold('\n⚙️ Converting rules...\n'));
+  // Show a nice progress indicator
+  const spinner = createSpinner();
+  spinner.start('Converting your rules...');
   
   try {
     const { convertRules } = await import('../converters/index.js');
-    
     const result = await convertRules(sourceDetection.rules, targetEditors, '.');
     
+    spinner.stop();
+    
     if (result.success) {
-      console.log(chalk.green.bold('✅ Conversion completed successfully!\n'));
+      console.log(chalk.green.bold('Conversion complete! Your rules are ready to go.\n'));
       
-      console.log(`${chalk.cyan('Converted:')} ${result.converted} files`);
-      console.log(`${chalk.cyan('Output files:')}`);
-      
-      for (const file of result.outputFiles) {
-        console.log(`  • ${chalk.white(file)}`);
-      }
+      // Group output files by editor for cleaner display
+      const filesByEditor = new Map<string, string[]>();
+      result.outputFiles.forEach(file => {
+        for (const editor of targetEditors) {
+          const editorKey = editor.toLowerCase().replace(/\s+/g, '-');
+          if (file.includes(editorKey) || 
+              file.includes('AGENTS.md') && editor === 'Codex CLI' ||
+              file.includes('CLAUDE.md') && editor === 'Claude Code' ||
+              file.includes('QWEN.md') && editor === 'QwenCoder') {
+            if (!filesByEditor.has(editor)) filesByEditor.set(editor, []);
+            filesByEditor.get(editor)?.push(file);
+          }
+        }
+      });
+
+      filesByEditor.forEach((files, editor) => {
+        console.log(`   ${chalk.cyan('📁')} ${chalk.bold(editor)}`);
+        files.forEach(file => {
+          console.log(`     ${chalk.gray('→')} ${file}`);
+        });
+        console.log();
+      });
       
       if (result.errors.length > 0) {
-        console.log(chalk.yellow('\n⚠️ Warnings:'));
-        for (const error of result.errors) {
-          console.log(`  • ${chalk.yellow(error)}`);
-        }
+        console.log(chalk.yellow('⚠️  A few things to note:'));
+        result.errors.forEach(error => {
+          console.log(`   ${chalk.yellow('•')} ${error}`);
+        });
+        console.log();
       }
       
-      console.log(chalk.green('\n🎉 Rules have been converted and are ready to use!'));
-      console.log(chalk.gray('You can now copy these files to your target AI editors.'));
+      console.log(chalk.green('Your rules are now ready to use in your target editors!'));
+      console.log(chalk.gray('   💡 Tip: Test the converted rules in a small project first to ensure they work as expected.\n'));
       
     } else {
-      console.log(chalk.red.bold('❌ Conversion failed!\n'));
+      console.log(chalk.red.bold('Conversion failed.\n'));
       
       if (result.errors.length > 0) {
-        console.log(chalk.red('Errors:'));
-        for (const error of result.errors) {
-          console.log(`  • ${chalk.red(error)}`);
-        }
+        console.log(chalk.red('Here\'s what happened:'));
+        result.errors.forEach(error => {
+          console.log(`   ${chalk.red('•')} ${error}`);
+        });
+        console.log();
+        console.log(chalk.gray('💡 Try running the command again, or check if your rule files have the correct format.'));
       }
     }
     
   } catch (error) {
-    console.error(chalk.red('❌ Conversion error:'));
-    console.error(chalk.red(error instanceof Error ? error.message : String(error)));
+    spinner.stop();
+    console.log(chalk.red.bold('Unexpected error during conversion!\n'));
+    console.log(chalk.red(error instanceof Error ? error.message : String(error)));
+    console.log(chalk.gray('\n💡 This might be a bug. Consider reporting it with your rule files.'));
   }
 }
 
 async function createNewRulesFlow(): Promise<void> {
   const allEditors = getEditorDisplayNames();
   
-  const { selectedEditor } = await inquirer.prompt([
-    {
-      type: 'list',
-      name: 'selectedEditor',
-      message: 'Select an editor to create rules for:',
-      choices: allEditors,
-      pageSize: Math.min(allEditors.length, 10)
-    }
-  ]);
+  console.log(chalk.blue('🆕 Let\'s create some rules! Which editor are you using?'));
   
-  console.log(chalk.blue(`\n📝 Creating new rules for ${selectedEditor}...`));
-  console.log(chalk.yellow('🚧 Rule creation not yet implemented.'));
+  const { selectedEditor } = await inquirer.prompt({
+    type: 'list',
+    name: 'selectedEditor',
+    message: 'Choose your AI editor:',
+    choices: allEditors,
+    pageSize: Math.min(allEditors.length, 8)
+  });
+  
+  console.log(chalk.green(`\n✨ Great! I'd love to help you create ${selectedEditor} rules.`));
+  console.log(chalk.yellow('🚧 Rule creation is coming in the next version!'));
+  console.log(chalk.gray('   For now, you can manually create rules and then use CrossRule to convert them.'));
+  console.log(chalk.gray('   Check the documentation for rule format examples.\n'));
 }
