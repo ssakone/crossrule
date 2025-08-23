@@ -1,0 +1,30 @@
+---
+description: React component development guidelines
+globs: ["**/*.tsx", "**/*.jsx"]
+---
+
+# React Component Standards
+
+## Component Architecture
+- Use functional components with React hooks for all new components
+- Implement proper TypeScript interfaces for all component props
+- Use React.memo for performance optimization when components have expensive renders
+- Prefer composition over inheritance for component reusability
+
+## State Management
+- Use useState for local component state
+- Use useReducer for complex state logic with multiple sub-values
+- Implement custom hooks to encapsulate and reuse stateful logic
+- Avoid prop drilling; use Context API for deeply nested state sharing
+
+## Error Handling
+- Implement Error Boundaries for graceful error handling in component trees
+- Handle loading, error, and empty states appropriately in data-fetching components
+- Use React Suspense for code splitting and lazy loading
+- Provide meaningful error messages and fallback UI for users
+
+## Performance Best Practices
+- Use useCallback and useMemo hooks to prevent unnecessary re-renders
+- Implement lazy loading for route components and heavy dependencies
+- Optimize bundle size by importing only needed modules from libraries
+- Profile component performance regularly with React Developer Tools

@@ -1,0 +1,24 @@
+---
+description: TypeScript coding standards and best practices
+alwaysApply: true
+---
+
+# TypeScript Development Rules
+
+## Core Configuration
+- Use strict TypeScript configuration with all strict mode options enabled
+- Target ES2020 for broad compatibility while maintaining modern features
+- Enable `noUncheckedIndexedAccess` to catch potential undefined access
+- Use `exactOptionalPropertyTypes` for precise optional property handling
+
+## Type Definitions
+- Prefer interfaces over type aliases for object shapes and contracts
+- Use type aliases for union types, computed types, and complex type expressions
+- Always provide explicit return types for public functions and methods
+- Avoid `any` type except for gradual migration from JavaScript
+
+## Code Organization
+- Group related types and interfaces in dedicated type definition files
+- Use barrel exports (index.ts) to create clean import paths
+- Implement proper module boundaries and avoid circular dependencies
+- Follow consistent naming conventions: PascalCase for types, camelCase for functions
