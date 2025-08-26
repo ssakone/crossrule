@@ -76,7 +76,9 @@ async function parseRulesFromLocation(editor: EditorType, location: string): Pro
     }
   } else if (stat.isDirectory()) {
     const config = EDITOR_CONFIGS[editor];
-    const patterns = config.fileFormats.map(ext => `${location}/**/*${ext}`);
+    // Normalize Windows paths for glob - fast-glob expects forward slashes
+    const normalizedLocation = location.replace(/\\/g, '/');
+    const patterns = config.fileFormats.map(ext => `${normalizedLocation}/**/*${ext}`);
     const files = await glob(patterns, { absolute: true });
     
     for (const file of files) {
