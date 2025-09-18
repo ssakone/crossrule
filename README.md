@@ -45,7 +45,7 @@ Verify the installation:
 
 ```bash
 crossrule --version
-# Should output: 1.0.1
+# Should output: 1.0.3
 ```
 
 ## Quick Start

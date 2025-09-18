@@ -9,7 +9,7 @@ const program = new Command();
 program
   .name('crossrule')
   .description('Convert AI editor rules between different formats')
-  .version('1.0.1', '-v, --version', 'Display version number');
+  .version('1.0.3', '-v, --version', 'Display version number');
 
 program
   .command('init')
