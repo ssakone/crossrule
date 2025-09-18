@@ -5,6 +5,16 @@ All notable changes to CrossRule will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2025-01-18
+
+### Added
+- **AGENTS.md Format Support** - Introduced shared AGENTS.md format for Codex CLI, OpenCode et VSCode Agents
+- **Enhanced Agent Documentation** - Standardized agent configuration and rule format across multiple editors
+
+### Improved
+- **Cross-Editor Compatibility** - Better format handling for agent-based AI editors
+- **Documentation Structure** - Unified agent documentation format for improved consistency
+
 ## [1.0.1] - 2025-01-20
 
 ### Added
