@@ -21,7 +21,7 @@ CrossRule works with 9 major AI code editors:
 - **Windsurf** - Markdown files in `.windsurf/rules/`  
 - **Cline** - Markdown files in `.clinerules/`
 - **VSCode** - Instructions and prompts for AI extensions
-- **Codex CLI** - `AGENTS.md` project rules
+- **AGENTS.md-compatible editors** (Codex CLI, OpenCode, VSCode Agents) - `AGENTS.md` project rules
 - **Claude Code** - `CLAUDE.md` guidance files
 - **Qoder** - Natural language rules with trigger conditions
 - **Trae** - Markdown rules with YAML frontmatter
@@ -188,7 +188,7 @@ CrossRule looks for rules in these locations:
 
 ```
 # Single-file formats
-AGENTS.md          # Codex CLI
+AGENTS.md          # Codex CLI / OpenCode / VSCode Agents
 CLAUDE.md          # Claude Code  
 QWEN.md            # QwenCoder
 
@@ -199,6 +199,8 @@ QWEN.md            # QwenCoder
 .qoder/rules/      # Qoder trigger-based rules
 .trae/rules/       # Trae multilingual rules
 ```
+
+Learn more about the shared `AGENTS.md` standard for Codex CLI, OpenCode, VSCode Agents, and other tools at https://agents.md.
 
 ## Project Integration
 

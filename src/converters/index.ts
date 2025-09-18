@@ -2,7 +2,7 @@ import { writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 import matter from 'gray-matter';
 import { Rule, EditorType, ConversionResult } from '../types/index.js';
-import { EDITOR_CONFIGS, getEditorByDisplayName } from '../utils/index.js';
+import { EDITOR_CONFIGS, getEditorByDisplayName, getAgentsSharedDescription } from '../utils/index.js';
 
 export async function convertRules(
   sourceRules: Rule[],
@@ -16,6 +16,8 @@ export async function convertRules(
     errors: [],
     outputFiles: []
   };
+  const perEditorOutputs: Partial<Record<EditorType, string[]>> = {};
+  const editorSelections = new Map<EditorType, string[]>();
 
   for (const editorName of targetEditors) {
     const editorType = getEditorByDisplayName(editorName);
@@ -23,15 +25,26 @@ export async function convertRules(
       result.errors.push(`Unknown editor: ${editorName}`);
       continue;
     }
+    const selections = editorSelections.get(editorType) ?? [];
+    selections.push(editorName);
+    editorSelections.set(editorType, selections);
+  }
 
+  for (const [editorType, names] of editorSelections.entries()) {
     try {
       const files = await convertToEditor(sourceRules, editorType, outputPath);
       result.outputFiles.push(...files);
       result.converted += files.length;
+      perEditorOutputs[editorType] = files;
     } catch (error) {
-      result.errors.push(`Failed to convert to ${editorName}: ${error}`);
+      const displayNames = names.join(', ');
+      result.errors.push(`Failed to convert to ${displayNames}: ${error}`);
       result.success = false;
     }
+  }
+
+  if (Object.keys(perEditorOutputs).length > 0) {
+    result.perEditorOutputFiles = perEditorOutputs;
   }
 
   return result;
@@ -89,6 +102,7 @@ async function convertToSingleFile(
   switch (targetEditor) {
     case 'codex':
       content = '# Project Agent Rules\n\n';
+      content += `${getAgentsSharedDescription()}\n`;
       content += '*Converted rules from multiple sources*\n\n';
       break;
     case 'claude-code':
@@ -241,6 +255,7 @@ function convertToCodex(rule: Rule): string {
   let content = '';
   
   content += `# ${rule.description || rule.name}\n\n`;
+  content += `${getAgentsSharedDescription()}\n`;
   content += `*Converted from ${rule.source} rules*\n\n`;
   content += rule.content;
 

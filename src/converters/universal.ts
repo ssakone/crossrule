@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import yaml from 'js-yaml';
 import { UniversalRule, EditorType } from '../types/index.js';
+import { getAgentsSharedDescription } from '../utils/index.js';
 
 export async function convertUniversalRule(rule: UniversalRule, targetEditor: EditorType): Promise<string[]> {
   const outputFiles: string[] = [];
@@ -156,12 +157,26 @@ async function convertToCodex(rule: UniversalRule): Promise<string[]> {
   const sectionContent = `---- ${sectionName} ----\n\n${rule.content}\n\n`;
   
   // Append to AGENTS.md or create it
+  const headerTitle = '# Project Agent Rules';
+  const sharedDescription = getAgentsSharedDescription();
+  const headerWithNote = `${headerTitle}\n\n${sharedDescription}\n\n`;
   let existingContent = '';
   try {
     existingContent = await fs.readFile(filepath, 'utf8');
   } catch (error) {
-    // File doesn't exist, start with header
-    existingContent = '# Project Agent Rules\n\n';
+    // File doesn't exist, start with header + shared note
+    existingContent = headerWithNote;
+  }
+
+  if (!existingContent.includes(sharedDescription)) {
+    if (existingContent.startsWith(headerTitle)) {
+      existingContent = existingContent.replace(headerTitle, headerWithNote);
+      if (!existingContent.includes(`${sharedDescription}\n\n`)) {
+        existingContent = existingContent.replace(sharedDescription, `${sharedDescription}\n\n`);
+      }
+    } else {
+      existingContent = `${headerWithNote}${existingContent}`;
+    }
   }
   
   // Check if section already exists

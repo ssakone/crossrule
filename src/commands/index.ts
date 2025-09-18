@@ -1,8 +1,8 @@
 import inquirer from 'inquirer';
 import chalk from 'chalk';
-import { DetectionResult } from '../types/index.js';
+import { DetectionResult, EditorType } from '../types/index.js';
 import { detectAllRules } from '../parsers/index.js';
-import { EDITOR_CONFIGS, getEditorDisplayNames } from '../utils/index.js';
+import { EDITOR_CONFIGS, getEditorDisplayNames, getDisplayNamesForEditor, getEditorByDisplayName } from '../utils/index.js';
 
 // Export add command
 export { addCommand } from './add.js';
@@ -45,7 +45,10 @@ export async function initCommand(): Promise<void> {
   for (const detection of detectedRules) {
     const config = EDITOR_CONFIGS[detection.editor as keyof typeof EDITOR_CONFIGS];
     const ruleText = detection.ruleCount === 1 ? 'rule' : 'rules';
-    console.log(`\n   ${chalk.bold(config.displayName)} - ${detection.ruleCount} ${ruleText}`);
+    const aliasNote = config.aliasDisplayNames && config.aliasDisplayNames.length > 0
+      ? chalk.gray(` (also: ${config.aliasDisplayNames.join(', ')})`)
+      : '';
+    console.log(`\n   ${chalk.bold(config.displayName)}${aliasNote} - ${detection.ruleCount} ${ruleText}`);
     console.log(`     ${chalk.gray(detection.location)}`);
   }
 
@@ -121,12 +124,11 @@ async function handleMultipleRuleSources(detections: DetectionResult[]): Promise
 }
 
 async function selectTargetEditors(sourceDetection: DetectionResult): Promise<void> {
-  const sourceConfig = EDITOR_CONFIGS[sourceDetection.editor as keyof typeof EDITOR_CONFIGS];
-  
   // Get all available editors except the source
   const allEditors = getEditorDisplayNames();
+  const namesToExclude = getDisplayNamesForEditor(sourceDetection.editor as EditorType);
   const targetChoices = allEditors
-    .filter(name => name !== sourceConfig.displayName)
+    .filter(name => !namesToExclude.includes(name))
     .map(name => ({
       name,
       value: name,
@@ -164,7 +166,13 @@ async function showConversionPreview(
   console.log(chalk.green.bold('\nConversion preview:'));
   
   console.log(`\n   ${chalk.cyan('From:')} ${sourceConfig.displayName} (${sourceDetection.ruleCount} ${ruleText})`);
-  console.log(`   ${chalk.cyan('To:')} ${targetEditors.join(', ')}`);
+  const groupedTargets = groupEditorsByType(targetEditors);
+  const formattedTargets = groupedTargets.map(group => {
+    const { base, aliases } = getEditorLabelParts(group);
+    const aliasText = aliases.length ? ` ${chalk.gray(`(${aliases.join(', ')})`)}` : '';
+    return `${base}${aliasText}`;
+  });
+  console.log(`   ${chalk.cyan('To:')} ${formattedTargets.join(', ')}`);
   
   if (sourceDetection.rules.length <= 3) {
     console.log(`\n   ${chalk.gray('Your rules:')}`);
@@ -213,26 +221,33 @@ async function performConversion(
     if (result.success) {
       console.log(chalk.green.bold('Conversion complete! Your rules are ready to go.\n'));
       
-      // Group output files by editor for cleaner display
-      const filesByEditor = new Map<string, string[]>();
-      result.outputFiles.forEach(file => {
-        for (const editor of targetEditors) {
-          const editorKey = editor.toLowerCase().replace(/\s+/g, '-');
-          if (file.includes(editorKey) || 
-              file.includes('AGENTS.md') && editor === 'Codex CLI' ||
-              file.includes('CLAUDE.md') && editor === 'Claude Code' ||
-              file.includes('QWEN.md') && editor === 'QwenCoder') {
-            if (!filesByEditor.has(editor)) filesByEditor.set(editor, []);
-            filesByEditor.get(editor)?.push(file);
-          }
-        }
-      });
+      const groupedTargets = groupEditorsByType(targetEditors);
+      const perEditorOutputs = result.perEditorOutputFiles ?? {};
+      let showedAgentsNote = false;
 
-      filesByEditor.forEach((files, editor) => {
-        console.log(`   ${chalk.cyan('📁')} ${chalk.bold(editor)}`);
+      groupedTargets.forEach(group => {
+        const { base, aliases } = getEditorLabelParts(group);
+        const config = EDITOR_CONFIGS[group.editorType];
+        const aliasNote = config.aliasDisplayNames && config.aliasDisplayNames.length > 0
+          ? chalk.gray(` (also: ${config.aliasDisplayNames.join(', ')})`)
+          : '';
+        const selectionNote = aliases.length > 0
+          ? chalk.gray(` [selected as: ${aliases.join(', ')}]`)
+          : '';
+
+        console.log(`   ${chalk.cyan('📁')} ${chalk.bold(base)}${aliasNote}${selectionNote}`);
+
+        const files = perEditorOutputs[group.editorType] ?? [];
         files.forEach(file => {
           console.log(`     ${chalk.gray('→')} ${file}`);
         });
+
+        if (group.editorType === 'codex' && !showedAgentsNote) {
+          const sharedNames = [config.displayName, ...(config.aliasDisplayNames ?? [])].join(', ');
+          console.log(`     ${chalk.gray('Shared AGENTS.md format:')} ${sharedNames}`);
+          showedAgentsNote = true;
+        }
+
         console.log();
       });
       
@@ -266,6 +281,32 @@ async function performConversion(
     console.log(chalk.red(error instanceof Error ? error.message : String(error)));
     console.log(chalk.gray('\n💡 This might be a bug. Consider reporting it with your rule files.'));
   }
+}
+
+type EditorGroup = {
+  editorType: EditorType;
+  names: string[];
+};
+
+function groupEditorsByType(editorNames: string[]): EditorGroup[] {
+  const groups = new Map<EditorType, string[]>();
+  for (const name of editorNames) {
+    const editorType = getEditorByDisplayName(name);
+    if (!editorType) continue;
+    const existing = groups.get(editorType) ?? [];
+    existing.push(name);
+    groups.set(editorType, existing);
+  }
+  return Array.from(groups.entries()).map(([editorType, names]) => ({ editorType, names }));
+}
+
+function getEditorLabelParts(group: EditorGroup): { base: string; aliases: string[] } {
+  const config = EDITOR_CONFIGS[group.editorType];
+  const aliases = group.names.filter(name => name !== config.displayName);
+  return {
+    base: config.displayName,
+    aliases
+  };
 }
 
 async function createNewRulesFlow(): Promise<void> {

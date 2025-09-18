@@ -49,7 +49,12 @@ export const EDITOR_CONFIGS: Record<EditorType, EditorConfig> = {
     locations: ['AGENTS.md'],
     supportedRuleTypes: ['always'],
     hasGlobSupport: false,
-    hasYamlFrontmatter: false
+    hasYamlFrontmatter: false,
+    aliasDisplayNames: [
+      'OpenCode',
+      'VSCode Agents',
+      'AGENTS.md Compatible'
+    ]
   },
   'claude-code': {
     name: 'claude-code',
@@ -91,13 +96,42 @@ export const EDITOR_CONFIGS: Record<EditorType, EditorConfig> = {
   }
 };
 
+export function getDisplayNamesForEditor(editor: EditorType): string[] {
+  const config = EDITOR_CONFIGS[editor];
+  if (!config) return [];
+  const names = [config.displayName];
+  if (config.aliasDisplayNames) {
+    names.push(...config.aliasDisplayNames);
+  }
+  return names;
+}
+
 export function getEditorDisplayNames(): string[] {
-  return Object.values(EDITOR_CONFIGS).map(config => config.displayName);
+  const names: string[] = [];
+  for (const editor of Object.keys(EDITOR_CONFIGS) as EditorType[]) {
+    for (const name of getDisplayNamesForEditor(editor)) {
+      if (!names.includes(name)) {
+        names.push(name);
+      }
+    }
+  }
+  return names;
 }
 
 export function getEditorByDisplayName(displayName: string): EditorType | null {
-  const entry = Object.entries(EDITOR_CONFIGS).find(
-    ([, config]) => config.displayName === displayName
-  );
-  return entry ? entry[0] as EditorType : null;
+  for (const [editorType, config] of Object.entries(EDITOR_CONFIGS) as [EditorType, EditorConfig][]) {
+    if (config.displayName === displayName) {
+      return editorType;
+    }
+    if (config.aliasDisplayNames && config.aliasDisplayNames.includes(displayName)) {
+      return editorType;
+    }
+  }
+  return null;
+}
+
+export function getAgentsSharedDescription(): string {
+  const config = EDITOR_CONFIGS.codex;
+  const names = [config.displayName, ...(config.aliasDisplayNames ?? [])];
+  return `*AGENTS.md shared format - works with ${names.join(', ')}. Docs: https://agents.md*`;
 }

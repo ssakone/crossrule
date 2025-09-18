@@ -109,6 +109,7 @@ export interface EditorConfig {
   hasYamlFrontmatter: boolean;
   maxFileSize?: number;
   maxTotalSize?: number;
+  aliasDisplayNames?: string[];
 }
 
 export interface ConversionOptions {
@@ -125,6 +126,7 @@ export interface ConversionResult {
   skipped: number;
   errors: string[];
   outputFiles: string[];
+  perEditorOutputFiles?: Partial<Record<EditorType, string[]>>;
 }
 
 // Editor-specific rule formats

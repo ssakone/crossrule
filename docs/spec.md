@@ -159,6 +159,7 @@ Apply the [general coding guidelines](./general-coding.instructions.md) to all c
 
 **File Format**: TOML configuration + Markdown rules
 **Location**: `~/.codex/config.toml` + project `AGENTS.md`
+**Shared Standard**: `AGENTS.md` is recognized by Codex CLI, OpenCode, VSCode Agents, and other tools documented at https://agents.md
 
 **Config Structure**:
 ```toml
